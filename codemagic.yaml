@@ -1,21 +1,17 @@
 workflows:
-  ios-release:
-    name: GymTracker iOS Build
+  ios-unsigned:
+    name: GymTracker iOS (sin firma - AltStore)
     max_build_duration: 30
     instance_type: mac_mini_m1
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.gymtracker.app
       vars:
         XCODE_PROJECT: "GymTracker.xcodeproj"
         XCODE_SCHEME: "GymTracker"
       xcode: latest
-      cocoapods: default
 
     scripts:
-      - name: Build iOS app
+      - name: Build iOS app (sin firma de código)
         script: |
           xcodebuild \
             -project "$XCODE_PROJECT" \
@@ -26,17 +22,18 @@ workflows:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
             build
 
-      - name: Package IPA (unsigned)
+      - name: Empaquetar IPA sin firma
         script: |
-          APP_PATH=$(find DerivedData -name "*.app" | head -1)
+          APP_PATH=$(find DerivedData/Build -name "*.app" -not -path "*/simulator/*" | head -1)
+          echo "App encontrada en: $APP_PATH"
           mkdir -p Payload
-          cp -r "$APP_PATH" Payload/
+          cp -r "$APP_PATH" Payload/GymTracker.app
           zip -r GymTracker.ipa Payload/
-          echo "IPA created: GymTracker.ipa"
+          echo "IPA creado: $(du -sh GymTracker.ipa)"
 
     artifacts:
       - GymTracker.ipa
-      - DerivedData/Logs/**/*.xcresult
